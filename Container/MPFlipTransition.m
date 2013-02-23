@@ -14,6 +14,10 @@
 #import "MPAnimation.h"
 #import <QuartzCore/QuartzCore.h>
 #include <math.h>
+#import <objc/runtime.h>
+
+const char *MPassociatedCachedScreenshotLeftHalfKey = "MPassociatedCachedScreenshotLeftHalfKey";
+const char *MPassociatedCachedScreenshotRightHalfKey = "MPassociatedCachedScreenshotRightHalfKey";
 
 static inline double mp_radians (double degrees) {return degrees * M_PI/180;}
 
@@ -223,8 +227,13 @@ static inline double mp_radians (double degrees) {return degrees * M_PI/180;}
 	// facing Page = the other half of the current view (doesn't move, gets covered by back page during 2nd half)
 	// back Page   = the half of the next view that appears on the flipping page during 2nd half
 	// reveal Page = the other half of the next view (doesn't move, gets revealed by front page during 1st half)
-	UIImage *pageFrontImage = [MPAnimation renderImageFromView:self.sourceView withRect:forwards? lowerRect : upperRect transparentInsets:insets];
-	
+    UIImage *pageFrontImage = [self preCachedImageFromView:self.sourceView onSide:forwards];
+
+    if (!pageFrontImage)
+    {
+        pageFrontImage = [MPAnimation renderImageFromView:self.sourceView withRect:forwards? lowerRect : upperRect transparentInsets:insets];
+    }
+
 	self.actingSource = [self sourceView]; // the view that is already part of the view hierarchy
 	UIView *containerView = [self.actingSource superview];
 	if (!containerView && !isRubberbanding)
@@ -284,12 +293,40 @@ static inline double mp_radians (double degrees) {return degrees * M_PI/180;}
 			}
 			break;
 	}
+
+    UIImage *pageFacingImage = nil;
+
+    if (drawFacing) {
+        pageFacingImage = [self preCachedImageFromView:self.sourceView onSide:!forwards];
+
+        if (!pageFacingImage)
+        {
+            pageFacingImage = [MPAnimation renderImageFromView:self.sourceView withRect:forwards? upperRect : lowerRect];
+        }
+    }
 	
-	UIImage *pageFacingImage = drawFacing? [MPAnimation renderImageFromView:self.sourceView withRect:forwards? upperRect : lowerRect] : nil;
-	
-	UIImage *pageBackImage = isRubberbanding? nil : [MPAnimation renderImageFromView:self.destinationView withRect:forwards? destUpperRect : destLowerRect transparentInsets:insets];
-	UIImage *pageRevealImage = drawReveal? [MPAnimation renderImageFromView:self.destinationView withRect:forwards? destLowerRect : destUpperRect] : nil;
-	
+    UIImage *pageBackImage = nil;
+
+    if (!isRubberbanding) {
+        pageBackImage = [self preCachedImageFromView:self.destinationView onSide:!forwards];
+
+        if (!pageBackImage)
+        {
+            pageBackImage = [MPAnimation renderImageFromView:self.destinationView withRect:forwards? destUpperRect : destLowerRect transparentInsets:insets];
+        }
+    }
+
+    UIImage *pageRevealImage = nil;
+
+    if (drawReveal) {
+        pageRevealImage = [self preCachedImageFromView:self.destinationView onSide:forwards];
+
+        if (!pageRevealImage)
+        {
+            pageRevealImage = [MPAnimation renderImageFromView:self.destinationView withRect:forwards? destLowerRect : destUpperRect];
+        }
+    }
+
 	CATransform3D transform = CATransform3DIdentity;
 	
 	CGFloat width = vertical? bounds.size.width : bounds.size.height;
@@ -437,6 +474,15 @@ static inline double mp_radians (double degrees) {return degrees * M_PI/180;}
 	self.animationView.layer.sublayerTransform = transform;
 		
 	[self setLayersBuilt:YES];
+}
+
+- (UIImage *)preCachedImageFromView:(UIView *)view onSide:(BOOL)right {
+    UIImage * image = (UIImage *)objc_getAssociatedObject(view, right? MPassociatedCachedScreenshotRightHalfKey : MPassociatedCachedScreenshotLeftHalfKey);
+    if (image) {
+        NSLog(@"Pre-cached image for %@ found (%@ side)", view, right? @"right" : @"left");
+    }
+
+    return image;
 }
 
 - (void)cleanupLayers
