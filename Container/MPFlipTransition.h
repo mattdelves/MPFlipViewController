@@ -9,6 +9,9 @@
 #import "MPFlipEnumerations.h"
 #import "MPTransition.h"
 
+extern const char *MPassociatedCachedScreenshotLeftHalfKey;
+extern const char *MPassociatedCachedScreenshotRightHalfKey;
+
 @interface MPFlipTransition : MPTransition
 
 #pragma mark - Properties
