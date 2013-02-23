@@ -55,6 +55,7 @@ NSString *MPFlipViewControllerDidFinishAnimatingNotification = @"com.markpospese
 @synthesize direction = _direction;
 @synthesize sourceController = _sourceController;
 @synthesize destinationController = _destinationController;
+@synthesize shouldAllowGesturePanningInsideContent = _shouldAllowGesturePanningInsideContent;
 
 - (id)initWithOrientation:(MPFlipViewControllerOrientation)orientation
 {
@@ -67,6 +68,7 @@ NSString *MPFlipViewControllerDidFinishAnimatingNotification = @"com.markpospese
 		_panning = NO;
 		_gestureDriven = NO;
 		_rubberbanding = NO;
+        _shouldAllowGesturePanningInsideContent = NO;
     }
     return self;
 }
@@ -240,26 +242,40 @@ NSString *MPFlipViewControllerDidFinishAnimatingNotification = @"com.markpospese
 		if ([self isAnimating])
 			return;
 		
-		// See if touch started near one of the edges, in which case we'll pan a page turn
 		BOOL isHorizontal = [self orientation] == MPFlipViewControllerOrientationHorizontal;
 		CGFloat value = isHorizontal? currentPosition.x : currentPosition.y;
 		CGFloat dimension = isHorizontal? self.view.bounds.size.width : self.view.bounds.size.height;
-		if (value <= MARGIN)
-		{
-			if (![self startFlipWithDirection:MPFlipViewControllerDirectionReverse])
-				return;
-		}
-		else if (value >= dimension - MARGIN)
-		{
-			if (![self startFlipWithDirection:MPFlipViewControllerDirectionForward])
-				return;
-		}
-		else
-		{
-			// Do nothing for now, but it might become a swipe later
-			return;
-		}
-		
+
+        if (self.shouldAllowGesturePanningInsideContent) {
+            if (value <= dimension / 2.f)
+            {
+                if (![self startFlipWithDirection:MPFlipViewControllerDirectionReverse])
+                    return;
+            }
+            else
+            {
+                if (![self startFlipWithDirection:MPFlipViewControllerDirectionForward])
+                    return;
+            }
+        } else {
+            // See if touch started near one of the edges, in which case we'll pan a page turn
+            if (value <= MARGIN)
+            {
+                if (![self startFlipWithDirection:MPFlipViewControllerDirectionReverse])
+                    return;
+            }
+            else if (value >= dimension - MARGIN)
+            {
+                if (![self startFlipWithDirection:MPFlipViewControllerDirectionForward])
+                    return;
+            }
+            else
+            {
+                // Do nothing for now, but it might become a swipe later
+                return;
+            }
+        }
+
 		[self setPanning:YES];
 		[self setPanStart:currentPosition];
 		[self setLastPanPosition:currentPosition];
@@ -338,17 +354,19 @@ NSString *MPFlipViewControllerDidFinishAnimatingNotification = @"com.markpospese
 	// don't recognize any further gestures if we're in the middle of animating a page-turn
 	if ([self isAnimating])
 		return NO;
-	
-	if ([gestureRecognizer isKindOfClass:[UITapGestureRecognizer class]] || [gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]])
-	{
-		// for taps and pans, only handle if started within margin, otherwise don't receive so that the content may handle it
-		CGPoint tapPoint = [touch locationInView:self.view];
-		BOOL isHorizontal = [self orientation] == MPFlipViewControllerOrientationHorizontal;
-		CGFloat value = isHorizontal? tapPoint.x : tapPoint.y;
-		CGFloat dimension = isHorizontal? self.view.bounds.size.width : self.view.bounds.size.height;
-		return (value <= MARGIN || value >= dimension - MARGIN);
-	}
-	
+
+    if (!self.shouldAllowGesturePanningInsideContent) {
+        if ([gestureRecognizer isKindOfClass:[UITapGestureRecognizer class]] || [gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]])
+        {
+            // for taps and pans, only handle if started within margin, otherwise don't receive so that the content may handle it
+            CGPoint tapPoint = [touch locationInView:self.view];
+            BOOL isHorizontal = [self orientation] == MPFlipViewControllerOrientationHorizontal;
+            CGFloat value = isHorizontal? tapPoint.x : tapPoint.y;
+            CGFloat dimension = isHorizontal? self.view.bounds.size.width : self.view.bounds.size.height;
+            return (value <= MARGIN || value >= dimension - MARGIN);
+        }
+    }
+
 	return YES;
 }
 
