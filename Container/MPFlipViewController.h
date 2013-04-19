@@ -80,3 +80,6 @@ typedef NSInteger MPFlipViewControllerDirection; // For 'MPFlipViewControllerOri
 #define MPNewControllerKey @"MPNewController"
 extern NSString *MPFlipViewControllerDidFinishAnimatingNotification;
 
+@protocol MPFlipViewFlipGestureRecognitionDisabled
+@end
+
