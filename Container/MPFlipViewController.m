@@ -375,7 +375,11 @@ NSString *MPFlipViewControllerDidFinishAnimatingNotification = @"com.markpospese
 	// don't recognize simultaneously with scroll view gestures in content area
 	if ([[otherGestureRecognizer view] isKindOfClass:[UIScrollView class]])
 		return NO;
-	
+
+    // don't recognize if the other view specifically wants to prohibit gesture flipping over its bounds
+    if ([[otherGestureRecognizer view] conformsToProtocol:@protocol(MPFlipViewFlipGestureRecognitionDisabled)])
+		return NO;
+
 	// Allow simultanoues pan & swipe recognizers
 	return YES;
 }
