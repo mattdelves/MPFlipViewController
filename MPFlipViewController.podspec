@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "MPFlipViewController"
-  s.version      = "master"
+  s.version      = "0.0.2"
   s.summary      = "Container view controller (iOS 5 containment API) that navigates between child view controllers via touch gestures and page-flip animations."
   s.description  = "A custom container view controller following the iOS 5 containment API that navigates between child view controllers via touch gestures and page-flip animations."
   s.homepage     = "http://markpospesel.com/2012/07/28/mpflipviewcontroller/"
